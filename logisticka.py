@@ -10,7 +10,7 @@ def h(theta, x):
     return 1 / (1 + math.exp(-theta.T.dot(x)))
 
 
-# gradijentni spust, maksimizacija verodostojnosti
+# sarzni gradijentni spust, maksimizacija verodostojnosti
 def gradient(x, y, theta):
     gl = np.zeros((n, 1))
     for i in range(m):
@@ -22,7 +22,6 @@ def gradient(x, y, theta):
 
 
 def gradient_descent(x, y):
-    print()
     print('gradient_descent')
     alpha = 0.01    # konstanta ucenja
     theta = np.zeros((n, 1))
@@ -51,39 +50,13 @@ y0[y0 >= 1], y0[y0 == 0], y0[y0 > 1] = 2, 1, 0
 y1[y1 != 1] = 0
 y2[y2 <= 1], y2[y2 == 2] = 0, 1
 theta0 = gradient_descent(x, y0)
-print('y0 ', y0)
-print('theta0: ', theta0)
-print()
-
-# y1[y1 != 1] = 0
 # theta1 = gradient_descent(x, y1)
-# print('y1', y1)
-# print('theta1: ', theta1)
+# theta2 = gradient_descent(x, y2)
 # print()
-#
-# y2[y2 < 2] = 0
-# y2[y2 == 2] = 1
-# print('y2', y2)
 
-# # konfuziona matrica
+# konfuziona matrica
 # conf = np.zeros((n-1, n-1))
 # print(conf)
 
-# # print(h(np.zeros(n), x))
-# theta = np.array([-0.3, -3.462, -0.04645, -1.24045, -0.4613, -5.925])
-# x = np.array([1.00e+00, 1.42e+01, 3.06e+00, 5.64e+00, 3.92e+00, 1.07e+03])
-# # h(theta, x)
-# print('theta', theta)
-# print('x: ', x.T)
-# print(h(theta, x.T))
-# # print(1 / (1 + round(math.exp(-theta.dot(x.T)), 10)))
-#
-# # logistička
-#
-# theta = np.zeros((n, 1))
-# print(theta)
-
-
-theta, x = np.array([1, 2, 3]), np.array([4, 5, 6])
-1 / (1 + round(math.exp(-theta.T.dot(x)), 10))
-
+# theta = np.array([[-0.3], [-3.462], [-0.04645], [-1.24045], [-0.4613], [-5.925]])
+# x = np.array([[1.00e+00], [1.42e+01], [3.06e+00], [5.64e+00], [3.92e+00], [1.07e+03]])
