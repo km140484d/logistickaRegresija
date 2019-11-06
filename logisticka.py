@@ -6,12 +6,8 @@ import math
 import matplotlib.pyplot as plt
 
 
-# provereno
 def h(theta, x):
     gamma = -theta.T.dot(x)
-    # if gamma > 500:
-    #     return 0
-    # else:
     return 1 / (1 + math.exp(gamma))
 
 
@@ -37,13 +33,27 @@ def gradient_descent(x, y):
     return theta
 
 
+# softmax
+def delta(x, y, theta):
+    m = x.shape[0]
+    deltaJ = np.zeros((k, n))
+    for r in range(k-1):
+        for i in range(m):
+            s = 0
+            for j in range(k):
+                s = s + math.exp(theta[j].dot(x[i].T))
+            deltaJ[r] = deltaJ[r] + ((y[i] == r) - math.exp(theta[r].dot(x[i].T))/s) * x[i]    #
+    return deltaJ
+
+
 df = pd.read_csv('multiclass_data.csv', header=None)
 df.columns = ['x1', 'x2', 'x3', 'x4', 'x5', 'y']
 df.insert(0, 'one', 1)
-# df = df.sample(frac=1)
+df = df.sample(frac=1)
 
+y = df['y'].to_numpy()
 x = df.iloc[:, 0:6].to_numpy()
-m, n = x.shape[0], x.shape[1]
+m, n, k = x.shape[0], x.shape[1], len(np.unique(y))     # n ukljucuje kolonu sa 1
 xs = np.copy(x)
 # standardizacija
 for i in range(1, 6):
@@ -51,24 +61,17 @@ for i in range(1, 6):
     std = np.std(xs[:, i])
     for j in range(m):
         xs[j, i] = (xs[j, i] - xa) / std
-y = df['y'].to_numpy()
-
-# print(m, ', ', n)
-
 
 y0, y1, y2 = np.copy(y), np.copy(y), np.copy(y)
 y0[y0 >= 1], y0[y0 == 0], y0[y0 > 1] = 2, 1, 0
 y1[y1 != 1] = 0
 y2[y2 <= 1], y2[y2 == 2] = 0, 1
-theta0 = gradient_descent(xs, y0)
-theta1 = gradient_descent(xs, y1)
-theta2 = gradient_descent(xs, y2)
-print(theta0, theta1, theta2)
+theta0, theta1, theta2 = gradient_descent(xs, y0), gradient_descent(xs, y1), gradient_descent(xs, y2)
 
 # konfuziona matrica
-conf = np.zeros((len(np.unique(y)), len(np.unique(y))))
+conf = np.zeros((k, k))
 y_guess = np.zeros((m, 1), int)
-for i in range(1, m):
+for i in range(m):
     h0 = h(theta0, xs[i].T)
     h1 = h(theta1, xs[i].T)
     h2 = h(theta2, xs[i].T)
@@ -78,7 +81,30 @@ for i in range(1, m):
         y_guess[i] = 1
     else:
         y_guess[i] = 2
-    # print('y[i]', y[i], 'y_guess[i]', y_guess[i])
     conf[y[i], y_guess[i]] = conf[y[i], y_guess[i]] + 1
 
-print('conf', conf)
+print('conf [log]: ', conf)
+
+# softmax
+alpha, step, row_num, cnt = 0.02, 0, 10, 1000
+theta = np.zeros((k, n))
+shuffle = np.arange(m)
+for i in range(cnt):
+    theta = theta + alpha*delta(xs[step:min(m, step+row_num)], y[step:min(m, step+row_num)], theta)
+    step = (step + row_num) % m
+    if step < row_num:
+        step = 0
+        np.random.shuffle(shuffle)
+        xs = xs[shuffle]
+        y = y[shuffle]
+conf = np.zeros((k, k))
+for i in range(m):
+    phi = np.zeros((k, 1))
+    s = 0
+    for r in range(k):
+        s = s + math.exp(theta[r].dot(xs[i].T))
+    for r in range(k):
+        phi[r] = math.exp(theta[r].dot(xs[i].T))/s
+    phi_max_index = np.argmax(phi)
+    conf[y[i], phi_max_index] = conf[y[i], phi_max_index] + 1
+print('conf [softmax]: ', conf)
