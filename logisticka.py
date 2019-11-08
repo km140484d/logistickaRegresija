@@ -7,6 +7,16 @@ import matplotlib.pyplot as plt
 import seaborn as sn
 
 
+def standardization(x):
+    xs = np.copy(x)
+    for i in range(1, n):
+        xa = np.average(xs[:, i])
+        std = np.std(xs[:, i])
+        for j in range(m):
+            xs[j, i] = (xs[j, i] - xa) / std
+    return xs
+
+
 def h(theta, x):
     gamma = -theta.T.dot(x)
     return 1 / (1 + math.exp(gamma))
@@ -22,15 +32,40 @@ def gradient(x, y, theta):
     return gl
 
 
-def gradient_descent(x, y):
+def gradient_loss(x, y):
+    alpha_l, alpha, alpha_h = 0.01, 0.02, 0.04
+    theta_l, J_l = gradient_descent_j(x, y, alpha_l, 1)
+    theta, J = gradient_descent_j(x, y, alpha, 1)
+    theta_h, J_h = gradient_descent_j(x, y, alpha_h, 1)
+    plt.plot(range(len(J_l)), J_l)
+    plt.plot(range(len(J)), J)
+    plt.plot(range(len(J_h)), J_h)
+    plt.legend(['alpha = 0.01', 'alpha = 0.02', 'alpha = 0.04'], loc='upper right')
+    plt.xlabel('iter')
+    plt.ylabel('J')
+    plt.show()
+
+
+def gradient_descent_j(x, y, alpha=0.02, flag=0):
     print('gradient_descent')
-    alpha = 0.01  # konstanta ucenja
     theta = np.zeros((n, 1))
     bound = 2e-2
+    J = []
     dl = gradient(x, y, theta)
     while np.linalg.norm(dl) > bound:
         theta = theta + alpha * dl
         dl = gradient(x, y, theta)
+        if flag:
+            dJ = 0
+            for i in range(m):
+                ht = h(theta, xs[i].T)
+                dJ = dJ + y[i] * math.log(ht) + (1 - y[i]) * math.log(1 - ht)
+            J.append(-dJ)
+    return theta, J
+
+
+def gradient_descent(x, y):
+    theta, J = gradient_descent_j(x, y)
     return theta
 
 
@@ -54,48 +89,59 @@ def gauss(x, my, sigma):
 
 def gnb(x, my1, sigma1, my0, sigma0):
     invS1, invS0 = np.linalg.inv(sigma1), np.linalg.inv(sigma0)
-    return math.exp(0.5*x.T.dot(invS1).dot(x) - my1.T.dot(invS1).dot(x) + 0.5*my1.T.dot(invS1).dot(my1)
-                    - 0.5*x.T.dot(invS0).dot(x) + my0.T.dot(invS0).dot(x) - 0.5*my0.T.dot(invS0).dot(my0))
+    return math.exp(0.5 * x.T.dot(invS1).dot(x) - my1.T.dot(invS1).dot(x) + 0.5 * my1.T.dot(invS1).dot(my1)
+                    - 0.5 * x.T.dot(invS0).dot(x) + my0.T.dot(invS0).dot(x) - 0.5 * my0.T.dot(invS0).dot(my0))
+
+
+def plot_conf(conf, reg, train):
+    if train == 1:
+        print(reg)
+        print('conf_train [log]:')
+    else:
+        print('conf_test [log]:')
+    print(conf)
+    df_cm = pd.DataFrame(conf, range(k), range(k))
+    hm = sn.heatmap(df_cm, annot=True, annot_kws={"size": 12})
+    bottom, top = hm.get_ylim()
+    hm.set_ylim(bottom + 0.5, top - 0.5)
+    plt.show()
 
 
 df = pd.read_csv('multiclass_data.csv', header=None)
 df.columns = ['x1', 'x2', 'x3', 'x4', 'x5', 'y']
 df.insert(0, 'one', 1)
-# df = df.sample(frac=1)
+boundary_index = round(df.shape[0] * 0.8)
+df = df.sample(frac=1)
 
 y = df['y'].to_numpy()
 x = df.iloc[:, 0:6].to_numpy()
 m, n, k = x.shape[0], x.shape[1], len(np.unique(y))  # n ukljucuje kolonu sa 1
-xs = np.copy(x)
-# standardizacija
-for i in range(1, 6):
-    xa = np.average(xs[:, i])
-    std = np.std(xs[:, i])
-    for j in range(m):
-        xs[j, i] = (xs[j, i] - xa) / std
+xs = standardization(x)
 
 # # logisticka regresija
-y0, y1, y2 = np.copy(y), np.copy(y), np.copy(y)
-y0[y0 >= 1], y0[y0 == 0], y0[y0 > 1] = 2, 1, 0
-y1[y1 != 1] = 0
-y2[y2 <= 1], y2[y2 == 2] = 0, 1
-
+# y0, y1, y2 = np.copy(y), np.copy(y), np.copy(y)
+# y0[y0 >= 1], y0[y0 == 0], y0[y0 > 1] = 2, 1, 0
+# y1[y1 != 1] = 0
+# y2[y2 <= 1], y2[y2 == 2] = 0, 1
 # theta0, theta1, theta2 = gradient_descent(xs, y0), gradient_descent(xs, y1), gradient_descent(xs, y2)
-# conf = np.zeros((k, k))
+# conf_train, conf_test = np.zeros((k, k)), np.zeros((k, k))
 # y_guess = np.zeros((m, 1), int)
 # for i in range(m):
-#     h0 = h(theta0, xs[i].T)
-#     h1 = h(theta1, xs[i].T)
-#     h2 = h(theta2, xs[i].T)
+#     h0, h1, h2 = h(theta0, xs[i].T), h(theta1, xs[i].T), h(theta2, xs[i].T)
 #     if h0 > h1 and h0 > h2:
 #         y_guess[i] = 0
 #     elif h1 > h0 and h1 > h2:
 #         y_guess[i] = 1
 #     else:
 #         y_guess[i] = 2
-#     conf[y[i], y_guess[i]] = conf[y[i], y_guess[i]] + 1
-# print('conf [log]: ', conf)
-#
+#     if i < boundary_index:
+#         conf_train[y[i], y_guess[i]] = conf_train[y[i], y_guess[i]] + 1
+#     else:
+#         conf_test[y[i], y_guess[i]] = conf_test[y[i], y_guess[i]] + 1
+# plot_conf(conf_train, 'logistička regresija:', 0)
+# plot_conf(conf_test, 'logistička regresija:', 1)
+# gradient_loss(xs, y1)   # funkcija gubitka u zavisnosti od stope ucenja
+
 # # softmax
 # alpha, step, row_num, cnt = 0.02, 0, 10, 1000  # 10,20,30
 # theta = np.zeros((k, n))
@@ -125,8 +171,6 @@ xs = np.c_[xs, y]
 n = n - 1  # nema potrebe vise za kolonom sa 1
 xs0, xs1, xs2 = xs[np.where(xs[:, n] == 0)], xs[np.where(xs[:, n] == 1)], xs[np.where(xs[:, n] == 2)]
 xs0, xs1, xs2 = xs0[:, :-1], xs1[:, :-1], xs2[:, :-1]
-print(xs0.shape[0], xs0.shape[1])
-print(xs0)
 x_sep = [xs0, xs1, xs2]
 my, sigma = np.zeros((k, n)), np.zeros((k, n))
 # racunanje my-matematicko ocekivanje, sigma-standardna devijansa
@@ -151,13 +195,9 @@ conf = np.zeros((k, k))
 # hm = sn.heatmap(df_cm, annot=True, annot_kws={"size": 12})
 # bottom, top = hm.get_ylim()
 # hm.set_ylim(bottom + 0.5, top - 0.5)
-#
 # plt.show()
 
 # GNB - Naivni Bayes
-
-# print(my.shape[0], my.shape[1])
-# print(my[0].T.dot(np.ones((1, xs0.shape[0]))))
 MY0 = np.ones((5, xs0.shape[0]))
 MY1 = np.ones((5, xs1.shape[0]))
 MY2 = np.ones((5, xs2.shape[0]))
@@ -165,12 +205,18 @@ for j in range(n):
     MY0[j] = my[0, j]
     MY1[j] = my[1, j]
     MY2[j] = my[2, j]
+# print('my', my)
+# print()
+# print('MY0', MY0)
 SIGMA0 = 1 / (xs0.shape[0] - 1) * (xs0.T - MY0).dot((xs0.T - MY0).T)
+print('SIGMA0', SIGMA0)
 SIGMA1 = 1 / (xs1.shape[0] - 1) * (xs1.T - MY1).dot((xs1.T - MY1).T)
+print('SIGMA1', SIGMA1)
 SIGMA2 = 1 / (xs2.shape[0] - 1) * (xs2.T - MY2).dot((xs2.T - MY2).T)
+print('SIGMA2', SIGMA2)
 
 conf = np.zeros((k, k))
-xs = xs[:, :-1]
+xs = xs[:, :-1]     # izbacivanje kolone sa 1
 for i in range(m):
     p = np.zeros(k)
     p[0] = 1 / (1 + gnb(xs[i].T, my[1].T, SIGMA1, my[0].T, SIGMA0) + gnb(xs[i].T, my[2].T, SIGMA2, my[0].T, SIGMA0))
@@ -178,3 +224,8 @@ for i in range(m):
     p[2] = 1 / (1 + gnb(xs[i].T, my[0].T, SIGMA0, my[2].T, SIGMA2) + gnb(xs[i].T, my[1].T, SIGMA1, my[2].T, SIGMA2))
     conf[y[i], np.argmax(p)] = conf[y[i], np.argmax(p)] + 1
 print('conf [gnb]: ', conf)
+df_cm = pd.DataFrame(conf, range(k), range(k))
+hm = sn.heatmap(df_cm, annot=True, annot_kws={"size": 12})
+bottom, top = hm.get_ylim()
+hm.set_ylim(bottom + 0.5, top - 0.5)
+# plt.show()
