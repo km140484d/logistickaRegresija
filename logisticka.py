@@ -185,7 +185,7 @@ xs = standardization(x)
 # plot_conf(conf_train, 'SOFTMAX:', 1)
 # plot_conf(conf_test, 'SOFTMAX:', 0)
 
-# GDA - Gausovska diskriminantna analiza
+# # GDA - Gausovska diskriminantna analiza
 xs = xs[:, 1:]
 xs = np.c_[xs, y]
 n = n - 1  # nema potrebe vise za kolonom sa 1
@@ -193,57 +193,50 @@ xs0, xs1, xs2 = xs[np.where(xs[:, n] == 0)], xs[np.where(xs[:, n] == 1)], xs[np.
 xs0, xs1, xs2 = xs0[:, :-1], xs1[:, :-1], xs2[:, :-1]
 x_sep = [xs0, xs1, xs2]
 my, sigma = np.zeros((k, n)), np.zeros((k, n))
-# racunanje my-matematicko ocekivanje, sigma-standardna devijansa
-for i in range(k):
-    for j in range(n):
-        my[i, j] = np.mean(x_sep[i][:, j])
-        sigma[i, j] = np.sd(x_sep[i][:, j])
+# # racunanje my-matematicko ocekivanje, sigma-standardna devijansa
+# for i in range(k):
+#     for j in range(n):
+#         my[i, j] = np.mean(x_sep[i][:, j])
+#         sigma[i, j] = np.sd(x_sep[i][:, j])
+# conf_train, conf_test = np.zeros((k, k)), np.zeros((k, k))
+# for i in range(m):
+#     gm, p = np.zeros((k, n)), np.zeros(k)  # gauss matrix
+#     total = 0
+#     for l in range(k):
+#         for j in range(n):
+#             gm[l, j] = gauss(xs[i, j], my[l, j], sigma[l, j])
+#         p[l] = np.prod(gm[l])
+#         total = total + p[l]
+#     p = p / total
+#     if i < boundary_index:
+#         conf_train[y[i], np.argmax(p)] = conf_train[y[i], np.argmax(p)] + 1
+#     else:
+#         conf_test[y[i], np.argmax(p)] = conf_test[y[i], np.argmax(p)] + 1
+# plot_conf(conf_train, 'GDA:', 1)
+# plot_conf(conf_test, 'GDA:', 0)
+
+# GNB - Naivni Bayes
+MY0 = np.ones((5, xs0.shape[0]))
+MY1 = np.ones((5, xs1.shape[0]))
+MY2 = np.ones((5, xs2.shape[0]))
+for j in range(n):
+    MY0[j] = my[0, j]
+    MY1[j] = my[1, j]
+    MY2[j] = my[2, j]
+SIGMA0 = 1 / (xs0.shape[0] - 1) * (xs0.T - MY0).dot((xs0.T - MY0).T)
+SIGMA1 = 1 / (xs1.shape[0] - 1) * (xs1.T - MY1).dot((xs1.T - MY1).T)
+SIGMA2 = 1 / (xs2.shape[0] - 1) * (xs2.T - MY2).dot((xs2.T - MY2).T)
+
 conf_train, conf_test = np.zeros((k, k)), np.zeros((k, k))
+xs = xs[:, :-1]     # izbacivanje kolone sa 1
 for i in range(m):
-    gm, p = np.zeros((k, n)), np.zeros(k)  # gauss matrix
-    total = 0
-    for l in range(k):
-        for j in range(n):
-            gm[l, j] = gauss(xs[i, j], my[l, j], sigma[l, j])
-        p[l] = np.prod(gm[l])
-        total = total + p[l]
-    p = p / total
+    p = np.zeros(k)
+    p[0] = 1 / (1 + gnb(xs[i].T, my[1].T, SIGMA1, my[0].T, SIGMA0) + gnb(xs[i].T, my[2].T, SIGMA2, my[0].T, SIGMA0))
+    p[1] = 1 / (1 + gnb(xs[i].T, my[0].T, SIGMA0, my[1].T, SIGMA1) + gnb(xs[i].T, my[2].T, SIGMA2, my[1].T, SIGMA1))
+    p[2] = 1 / (1 + gnb(xs[i].T, my[0].T, SIGMA0, my[2].T, SIGMA2) + gnb(xs[i].T, my[1].T, SIGMA1, my[2].T, SIGMA2))
     if i < boundary_index:
         conf_train[y[i], np.argmax(p)] = conf_train[y[i], np.argmax(p)] + 1
     else:
         conf_test[y[i], np.argmax(p)] = conf_test[y[i], np.argmax(p)] + 1
-plot_conf(conf_train, 'GDA:', 1)
-plot_conf(conf_test, 'GDA:', 0)
-
-# # GNB - Naivni Bayes
-# MY0 = np.ones((5, xs0.shape[0]))
-# MY1 = np.ones((5, xs1.shape[0]))
-# MY2 = np.ones((5, xs2.shape[0]))
-# for j in range(n):
-#     MY0[j] = my[0, j]
-#     MY1[j] = my[1, j]
-#     MY2[j] = my[2, j]
-# # print('my', my)
-# # print()
-# # print('MY0', MY0)
-# SIGMA0 = 1 / (xs0.shape[0] - 1) * (xs0.T - MY0).dot((xs0.T - MY0).T)
-# print('SIGMA0', SIGMA0)
-# SIGMA1 = 1 / (xs1.shape[0] - 1) * (xs1.T - MY1).dot((xs1.T - MY1).T)
-# print('SIGMA1', SIGMA1)
-# SIGMA2 = 1 / (xs2.shape[0] - 1) * (xs2.T - MY2).dot((xs2.T - MY2).T)
-# print('SIGMA2', SIGMA2)
-#
-# conf = np.zeros((k, k))
-# xs = xs[:, :-1]     # izbacivanje kolone sa 1
-# for i in range(m):
-#     p = np.zeros(k)
-#     p[0] = 1 / (1 + gnb(xs[i].T, my[1].T, SIGMA1, my[0].T, SIGMA0) + gnb(xs[i].T, my[2].T, SIGMA2, my[0].T, SIGMA0))
-#     p[1] = 1 / (1 + gnb(xs[i].T, my[0].T, SIGMA0, my[1].T, SIGMA1) + gnb(xs[i].T, my[2].T, SIGMA2, my[1].T, SIGMA1))
-#     p[2] = 1 / (1 + gnb(xs[i].T, my[0].T, SIGMA0, my[2].T, SIGMA2) + gnb(xs[i].T, my[1].T, SIGMA1, my[2].T, SIGMA2))
-#     conf[y[i], np.argmax(p)] = conf[y[i], np.argmax(p)] + 1
-# print('conf [gnb]: ', conf)
-# df_cm = pd.DataFrame(conf, range(k), range(k))
-# hm = sn.heatmap(df_cm, annot=True, annot_kws={"size": 12})
-# bottom, top = hm.get_ylim()
-# hm.set_ylim(bottom + 0.5, top - 0.5)
-# # plt.show()
+plot_conf(conf_train, 'GNB:', 1)
+plot_conf(conf_test, 'GNB:', 0)
